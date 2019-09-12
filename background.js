@@ -18,7 +18,11 @@ function openNewTab(url) {
  * @param {string} sender - caller
  * @param {string} sendResponse - sendResponse is an acknowledgement
  */
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) { });
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    if (request.method == "code") {
+        sendResponse();
+    }
+});
 /**
  * External Message listener listens to incoming message from external extensions
  * @param {Object} request - an object received from caller
@@ -27,7 +31,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) { 
  */
 chrome.runtime.onMessageExternal.addListener(function (request, sender, sendResponse) {
     if (request) {
-        if (request.installed_version) {
+        if (request.hasOwnProperty('installedExtension')) {
             var version = chrome.runtime.getManifest().version;
             sendResponse({
                 version: version
@@ -74,7 +78,6 @@ chrome.tabs.onUpdated.addListener(function (tab) {
         active: true,
         currentWindow: true
     }, function (tab) {
-        var url = tab[0].url;
         var currentTabId = tab[0].id;
         chrome.tabs.sendMessage(currentTabId, {
             tabClose: true
@@ -102,10 +105,8 @@ function extractRootDomain(url) {
  */
 function installNotice() {
     // Check if the extension has been installed before then exit this function
-    if (localStorage.getItem("install_time")) {
-        alert(localStorage.getItem("install_time"));
+    if (localStorage.getItem("install_time"))
         return;
-    }
     // Run this line of code if the install_time never exists
     var now = new Date().getTime();
     localStorage.setItem("install_time", String(now));
@@ -129,6 +130,12 @@ function installNotice() {
 function extensionVersion() {
     if (localStorage.getItem("last_installed_version")) {
         return localStorage.getItem("last_installed_version");
+    }
+}
+function resetBtnClickedVal(callback) {
+    isBtnClicked = true;
+    if (typeof callback == "function") {
+        callback();
     }
 }
 /**
@@ -189,4 +196,3 @@ function inArray(needle, haystack, argStrict) {
 installNotice();
 extensionVersion();
 setUpdateNotification();
-//# sourceMappingURL=background.js.map

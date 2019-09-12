@@ -2,7 +2,7 @@
 const popupsShowInTabs = {};
 const loginPopupsShowInTabs = {};
 /** This variable is used for finding Checkout button on top bar is clicked or not. */
-const isBtnClicked = false;
+let isBtnClicked = false;
 /**
  * This function opens new tab
  * @param {string} url - url to be opened.
@@ -26,7 +26,11 @@ chrome.runtime.onMessage.addListener(function(
   request,
   sender,
   sendResponse
-) {});
+) {
+  if (request.method == "code") {
+    sendResponse()
+  }
+});
 
 /**
  * External Message listener listens to incoming message from external extensions
@@ -40,7 +44,7 @@ chrome.runtime.onMessageExternal.addListener(function(
   sendResponse
 ) {
   if (request) {
-    if (request.installed_version) {
+    if (request.hasOwnProperty('installedExtension')) {
       const version = chrome.runtime.getManifest().version;
       sendResponse({
         version: version
@@ -103,7 +107,6 @@ chrome.tabs.onUpdated.addListener(function(tab) {
       currentWindow: true
     },
     function(tab) {
-      const url = tab[0].url;
       const currentTabId = tab[0].id;
       chrome.tabs.sendMessage(
         currentTabId,
@@ -137,10 +140,7 @@ function extractRootDomain(url) {
  */
 function installNotice() {
   // Check if the extension has been installed before then exit this function
-  if (localStorage.getItem("install_time")) {
-    alert(localStorage.getItem("install_time"));
-    return;
-  }
+  if (localStorage.getItem("install_time")) return;
 
   // Run this line of code if the install_time never exists
   const now = new Date().getTime();
@@ -169,6 +169,13 @@ function installNotice() {
 function extensionVersion() {
   if (localStorage.getItem("last_installed_version")) {
     return localStorage.getItem("last_installed_version");
+  }
+}
+
+function resetBtnClickedVal(callback) {
+  isBtnClicked = true;
+  if (typeof callback == "function") {
+    callback();
   }
 }
 
