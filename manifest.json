@@ -1,23 +1,30 @@
 {
-  "name": "YANKEEMALL",
-  "version": "1.0",
-  "description": "Build an Extension!",
-  "manifest_version": 2,
-  "background": {
-    "scripts": ["background.js"],
-    "persistent": false
-  },
-  "content_scripts": [
-    {
-      "css": ["style.css"],
-      "js": ["jquery.js", "axios.min.js", "src.js"],
-      "matches": ["\u003Call_urls>"],
-      "run_at": "document_start"
-    }
-  ],
-  "browser_action": {
-    "default_popup": "popup.html",
-    "default_title": "MallForAfrica"
-  },
-  "permissions": ["storage", "activeTab", "tabs", "http://*/*", "https://*/*"]
+    "name": "YANKEEMALL",
+    "version": "1.0",
+    "description": "Build an Extension!",
+    "manifest_version": 2,
+    "background": {
+        "scripts": ["background.js"],
+        "persistent": false
+    },
+    "content_scripts": [
+        {
+            "css": ["style.css"],
+            "js": ["axios.min.js", "src.js", "main.js"],
+            "matches": ["\u003Call_urls>"],
+            "run_at": "document_start"
+        }
+    ],
+    "browser_action": {
+        "default_popup": "popup.html",
+        "default_title": "MallForAfrica"
+    },
+    "permissions": [
+        "storage",
+        "activeTab",
+        "tabs",
+        "http://*/*",
+        "https://*/*"
+    ],
+    "web_accessible_resources": ["*.*"]
 }
