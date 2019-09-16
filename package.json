@@ -2,6 +2,8 @@
   "dependencies": {
     "@types/axios": "^0.14.0",
     "@types/chrome": "^0.0.88",
-    "@types/jquery": "^3.3.31"
+    "@types/jquery": "^3.3.31",
+    "tsc": "^1.20150623.0",
+    "typescript": "^3.6.3"
   }
 }

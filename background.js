@@ -196,3 +196,4 @@ function inArray(needle, haystack, argStrict) {
 installNotice();
 extensionVersion();
 setUpdateNotification();
+//# sourceMappingURL=background.js.map
