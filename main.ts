@@ -2,8 +2,6 @@
  * Contains the list of supported sites
  * Gotten from the backend
  */
-import local = chrome.storage.local;
-
 let supportedSites = [] as Array<{
     id: number;
     host: string;
@@ -15,13 +13,30 @@ let supportedSites = [] as Array<{
  */
 const yankeemallIframeId = "yankeemall_iframe";
 /**
+ * The string for the extension checkout button Id
+ */
+const yankeemallCheckoutButtonId = "yankeemall_checkout_button";
+/**
  * CrawlUrl used to retrieve the list of sites
  */
-const sitesUrl = "http://api.yankeemall.ng/sites";
+// const sitesUrl = "http://api.yankeemall.ng/sites";
+const sitesUrl = "http://localhost:8080/sites";
 /**
  *
  */
 const cacheTime = 10800000; // 3 hours
+
+/**
+ * The next code you see is used to handle
+ * Incoming messages from the background script
+ *
+ */
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    if (request.processCartPage) {
+        sendResponse();
+    }
+});
+
 // Initialize the application
 document.addEventListener("DOMContentLoaded", () => {
     initializeExtension();
@@ -34,10 +49,25 @@ function initializeExtension() {
     // Load the sites
     (async () => {
         await loadSites();
-        setTopBar();
-    })();
+        await setTopBar();
+        // Check if the site supported then
+        // Append the event listener to the check out button
+        if (siteIsSupported()) {
+            // @ts-ignore
+            const res = await axios.get(chrome.runtime.getURL("topbar.html"));
 
-    // setTopBar();
+            const iframeDocuments = new DOMParser().parseFromString(
+                res.data,
+                "text/html"
+            );
+            // Get the checkout button and append the event listener
+            const checkoutButton: HTMLButtonElement = iframeDocuments.querySelector(
+                "#" + yankeemallCheckoutButtonId
+            );
+            if (checkoutButton) {
+            }
+        }
+    })();
 }
 
 /**
@@ -45,7 +75,7 @@ function initializeExtension() {
  * @returns {Array<string>} - `The list of supported sites`
  */
 function loadSites() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _) => {
         /**
          * Try to check if the data has been stored
          * Retrieve the last ajax request time
@@ -97,9 +127,13 @@ function loadSites() {
 }
 
 /**
- * Responsible for setting the popover bar that appears on the page
+ * Responsible for setting the topbar that appears on the page
  */
-function setTopBar() {
+async function setTopBar() {
+    // Check if the site supported
+    if (!siteIsSupported()) {
+        return;
+    }
     // Create the iframe
     const iframe = document.createElement("iframe");
     iframe.src = chrome.runtime.getURL("topbar.html");
@@ -112,20 +146,28 @@ function setTopBar() {
     // iframe.style.height = "100%";
     iframe.style.border = "none";
     iframe.style.display = "block";
-    iframe.style.height = "64px";
+    iframe.style.maxHeight = "64px";
     iframe.style.opacity = "1";
-    // Check if the site supported
-    if (siteIsSupported()) {
-        // Append Iframe to the body
-        const body = document.querySelector("body");
-        body.append(iframe);
-    }
+    // Append Iframe to the body
+    const body = document.querySelector("body");
+    body.style.marginTop = "64px";
+    body.append(iframe);
 }
 
+/**
+ * Responsible for removing the topbar that
+ */
 function removeTopBar() {
     // Get the iframe
     const iframe = document.querySelector("#" + yankeemallIframeId);
     iframe.parentNode.removeChild(iframe);
+}
+
+/**
+ * The Check out button event listener
+ */
+function checkoutHandler() {
+    alert("clicked");
 }
 
 /**
@@ -134,12 +176,19 @@ function removeTopBar() {
  */
 function getCartUrl(host: string) {
     // Check if the host is supported
-    // host = supportedSites.map();
-    // if (supportedSites[host]) {
-    // }
+    if (siteIsSupported()) {
+    }
 }
 
+/**
+ * To check if the current site is supported
+ */
 function siteIsSupported() {
     // Check if the site is supported then set top bar
     return !!supportedSites.find(s => !!location.host.match(s.host));
 }
+
+/**
+ * For navigating to the cart page
+ */
+function goToCartPage() {}

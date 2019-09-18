@@ -38,20 +38,34 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
  * Contains the list of supported sites
  * Gotten from the backend
  */
-var local = chrome.storage.local;
 var supportedSites = [];
 /**
  * The string for the extension iframe id
  */
 var yankeemallIframeId = "yankeemall_iframe";
 /**
+ * The string for the extension checkout button Id
+ */
+var yankeemallCheckoutButtonId = "yankeemall_checkout_button";
+/**
  * CrawlUrl used to retrieve the list of sites
  */
-var sitesUrl = "http://api.yankeemall.ng/sites";
+// const sitesUrl = "http://api.yankeemall.ng/sites";
+var sitesUrl = "http://localhost:8080/sites";
 /**
  *
  */
 var cacheTime = 10800000; // 3 hours
+/**
+ * The next code you see is used to handle
+ * Incoming messages from the background script
+ *
+ */
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    if (request.processCartPage) {
+        sendResponse();
+    }
+});
 // Initialize the application
 document.addEventListener("DOMContentLoaded", function () {
     initializeExtension();
@@ -63,24 +77,35 @@ function initializeExtension() {
     var _this = this;
     // Load the sites
     (function () { return __awaiter(_this, void 0, void 0, function () {
+        var res, iframeDocuments, checkoutButton;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, loadSites()];
                 case 1:
                     _a.sent();
-                    setTopBar();
-                    return [2 /*return*/];
+                    return [4 /*yield*/, setTopBar()];
+                case 2:
+                    _a.sent();
+                    if (!siteIsSupported()) return [3 /*break*/, 4];
+                    return [4 /*yield*/, axios.get(chrome.runtime.getURL("topbar.html"))];
+                case 3:
+                    res = _a.sent();
+                    iframeDocuments = new DOMParser().parseFromString(res.data, "text/html");
+                    checkoutButton = iframeDocuments.querySelector("#" + yankeemallCheckoutButtonId);
+                    if (checkoutButton) {
+                    }
+                    _a.label = 4;
+                case 4: return [2 /*return*/];
             }
         });
     }); })();
-    // setTopBar();
 }
 /**
  * Responsible for retrieving the list of supported sites
  * @returns {Array<string>} - `The list of supported sites`
  */
 function loadSites() {
-    return new Promise(function (resolve, reject) {
+    return new Promise(function (resolve, _) {
         /**
          * Try to check if the data has been stored
          * Retrieve the last ajax request time
@@ -159,34 +184,49 @@ function loadSites() {
     });
 }
 /**
- * Responsible for setting the popover bar that appears on the page
+ * Responsible for setting the topbar that appears on the page
  */
 function setTopBar() {
-    // Create the iframe
-    var iframe = document.createElement("iframe");
-    iframe.src = chrome.runtime.getURL("topbar.html");
-    iframe.id = yankeemallIframeId;
-    iframe.style.position = "fixed";
-    iframe.style.top = "0px";
-    iframe.style.left = "0px";
-    iframe.style.zIndex = "1000000000000000000";
-    iframe.style.width = "100%";
-    // iframe.style.height = "100%";
-    iframe.style.border = "none";
-    iframe.style.display = "block";
-    iframe.style.height = "64px";
-    iframe.style.opacity = "1";
-    // Check if the site supported
-    if (siteIsSupported()) {
-        // Append Iframe to the body
-        var body = document.querySelector("body");
-        body.append(iframe);
-    }
+    return __awaiter(this, void 0, void 0, function () {
+        var iframe, body;
+        return __generator(this, function (_a) {
+            // Check if the site supported
+            if (!siteIsSupported()) {
+                return [2 /*return*/];
+            }
+            iframe = document.createElement("iframe");
+            iframe.src = chrome.runtime.getURL("topbar.html");
+            iframe.id = yankeemallIframeId;
+            iframe.style.position = "fixed";
+            iframe.style.top = "0px";
+            iframe.style.left = "0px";
+            iframe.style.zIndex = "1000000000000000000";
+            iframe.style.width = "100%";
+            // iframe.style.height = "100%";
+            iframe.style.border = "none";
+            iframe.style.display = "block";
+            iframe.style.maxHeight = "64px";
+            iframe.style.opacity = "1";
+            body = document.querySelector("body");
+            body.style.marginTop = "64px";
+            body.append(iframe);
+            return [2 /*return*/];
+        });
+    });
 }
+/**
+ * Responsible for removing the topbar that
+ */
 function removeTopBar() {
     // Get the iframe
     var iframe = document.querySelector("#" + yankeemallIframeId);
     iframe.parentNode.removeChild(iframe);
+}
+/**
+ * The Check out button event listener
+ */
+function checkoutHandler() {
+    alert("clicked");
 }
 /**
  * For retrieving the cartUrl of the specified host
@@ -194,12 +234,18 @@ function removeTopBar() {
  */
 function getCartUrl(host) {
     // Check if the host is supported
-    // host = supportedSites.map();
-    // if (supportedSites[host]) {
-    // }
+    if (siteIsSupported()) {
+    }
 }
+/**
+ * To check if the current site is supported
+ */
 function siteIsSupported() {
     // Check if the site is supported then set top bar
     return !!supportedSites.find(function (s) { return !!location.host.match(s.host); });
 }
+/**
+ * For navigating to the cart page
+ */
+function goToCartPage() { }
 //# sourceMappingURL=main.js.map

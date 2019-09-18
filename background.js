@@ -19,8 +19,15 @@ function openNewTab(url) {
  * @param {string} sendResponse - sendResponse is an acknowledgement
  */
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (request.method == "code") {
-        sendResponse();
+    if (request.checkoutButtonClicked) {
+        alert("background");
+        // Send message to process cart page
+        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+            alert("background tab");
+            chrome.tabs.sendMessage(tabs[0].id, { processCartPage: true }, function (response) {
+                console.log(response.farewell);
+            });
+        });
     }
 });
 /**
@@ -31,7 +38,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
  */
 chrome.runtime.onMessageExternal.addListener(function (request, sender, sendResponse) {
     if (request) {
-        if (request.hasOwnProperty('installedExtension')) {
+        if (request.hasOwnProperty("installedExtension")) {
             var version = chrome.runtime.getManifest().version;
             sendResponse({
                 version: version
