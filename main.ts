@@ -13,14 +13,14 @@ let supportedSites = [] as Array<{
  */
 const yankeemallIframeId = "yankeemall_iframe";
 /**
- * The string for the extension checkout button Id
- */
-const yankeemallCheckoutButtonId = "yankeemall_checkout_button";
-/**
  * CrawlUrl used to retrieve the list of sites
  */
 // const sitesUrl = "http://api.yankeemall.ng/sites";
-const sitesUrl = "http://localhost:8080/sites";
+const sitesUrl = "http://localhost:8080/extension/sites";
+/**
+ * Url used to process items on cartPage
+ */
+const processUrl = "http://localhost:8080/extension/process";
 /**
  *
  */
@@ -33,6 +33,7 @@ const cacheTime = 10800000; // 3 hours
  */
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.processCartPage) {
+        processCartPage();
         sendResponse();
     }
 });
@@ -50,23 +51,6 @@ function initializeExtension() {
     (async () => {
         await loadSites();
         await setTopBar();
-        // Check if the site supported then
-        // Append the event listener to the check out button
-        if (siteIsSupported()) {
-            // @ts-ignore
-            const res = await axios.get(chrome.runtime.getURL("topbar.html"));
-
-            const iframeDocuments = new DOMParser().parseFromString(
-                res.data,
-                "text/html"
-            );
-            // Get the checkout button and append the event listener
-            const checkoutButton: HTMLButtonElement = iframeDocuments.querySelector(
-                "#" + yankeemallCheckoutButtonId
-            );
-            if (checkoutButton) {
-            }
-        }
     })();
 }
 
@@ -88,11 +72,13 @@ function loadSites() {
                     return res.data;
                 }
             }
+
             // Check if the time has been saved before
             if (obj["lastRequestTime"] !== undefined) {
                 // calculate the time
                 const elapsedTime =
                     Number(Date.now()) - Number(obj["lastRequestTime"]);
+
                 if (elapsedTime > cacheTime) {
                     // Fetch the sites from the server
                     try {
@@ -101,6 +87,7 @@ function loadSites() {
                     // Set the retrieved sites as the sites data
 
                     chrome.storage.sync.set({ sites: supportedSites });
+                    chrome.storage.sync.set({ lastRequestTime: Date.now() });
                     resolve();
                 } else {
                     // Means the time has not been elapsed fetch the already stored data
@@ -117,9 +104,14 @@ function loadSites() {
                     supportedSites = await requestForSites();
                 } catch (e) {}
                 // Set the retrieved sites as the sites data
-                chrome.storage.sync.set({ sites: supportedSites });
-                // Set the lastRequestTime
-                chrome.storage.sync.set({ lastRequestTime: Date.now() });
+                chrome.storage.sync.set({ sites: supportedSites }, () => {
+                    // Set the lastRequestTime
+                    chrome.storage.sync.set(
+                        { lastRequestTime: Date.now() },
+                        () => {}
+                    );
+                });
+
                 resolve();
             }
         });
@@ -164,31 +156,101 @@ function removeTopBar() {
 }
 
 /**
- * The Check out button event listener
+ * Sends the cart details to the api
  */
-function checkoutHandler() {
-    alert("clicked");
+async function sendCartDetailsToApi(html: string) {
+    // Send to the api
+    try {
+        // Get the site info
+        const siteInfo = getCurrentSiteInfo();
+        const data = {
+            html,
+            host: siteInfo.host
+        };
+        // Arrange the data to send;
+        try {
+            // @ts-ignore
+            const res = await axios.post(processUrl, data);
+            if (res.status === 200) {
+                // Send the message to the extension to save it cart details
+                if (res.data.success === true) {
+                    chrome.runtime.sendMessage(
+                        {
+                            saveCartItems: true,
+                            cart: res.data.cart
+                        },
+                        saved => {
+                            if (saved) {
+                                alert("done");
+                            }
+                        }
+                    );
+                }
+            }
+        } catch (e) {
+            if (e.response) {
+            }
+        }
+    } catch (e) {}
+}
+
+/**
+ * Check if the current page is the cart page if it isn't it navigates to the cart page
+ * get's the html content of cart page and sends them to the server for processing
+ */
+function processCartPage() {
+    // Check current page is cart page
+    if (!isCartPage()) {
+        goToCartPage();
+    }
+    // Get the body element
+    const content = document.querySelector("body");
+    const html = "<body>" + content.innerHTML + "</body>";
+    (async () => {
+        await sendCartDetailsToApi(html);
+    })();
 }
 
 /**
  * For retrieving the cartUrl of the specified host
- * @param {string} host location.host
  */
-function getCartUrl(host: string) {
+function getCurrentSiteInfo() {
     // Check if the host is supported
-    if (siteIsSupported()) {
+    if (!siteIsSupported()) {
+        return null;
     }
+    const site = supportedSites.find(s => location.host.match(s.host));
+    if (!site) {
+        return null;
+    }
+    return site;
 }
 
 /**
  * To check if the current site is supported
  */
-function siteIsSupported() {
+function siteIsSupported(): boolean {
     // Check if the site is supported then set top bar
     return !!supportedSites.find(s => !!location.host.match(s.host));
 }
 
 /**
+ * Check if cart page
+ */
+function isCartPage(): boolean {
+    const { cartUrls } = getCurrentSiteInfo();
+    for (let cartUrl of cartUrls) {
+        if (cartUrl === location.origin + location.pathname) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * For navigating to the cart page
  */
-function goToCartPage() {}
+function goToCartPage() {
+    const site = getCurrentSiteInfo();
+    location.href = site.cartUrls[0] + location.search;
+}

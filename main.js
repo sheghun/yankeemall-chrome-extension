@@ -44,14 +44,14 @@ var supportedSites = [];
  */
 var yankeemallIframeId = "yankeemall_iframe";
 /**
- * The string for the extension checkout button Id
- */
-var yankeemallCheckoutButtonId = "yankeemall_checkout_button";
-/**
  * CrawlUrl used to retrieve the list of sites
  */
 // const sitesUrl = "http://api.yankeemall.ng/sites";
-var sitesUrl = "http://localhost:8080/sites";
+var sitesUrl = "http://localhost:8080/extension/sites";
+/**
+ * Url used to process items on cartPage
+ */
+var processUrl = "http://localhost:8080/extension/process";
 /**
  *
  */
@@ -63,6 +63,7 @@ var cacheTime = 10800000; // 3 hours
  */
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.processCartPage) {
+        processCartPage();
         sendResponse();
     }
 });
@@ -77,7 +78,6 @@ function initializeExtension() {
     var _this = this;
     // Load the sites
     (function () { return __awaiter(_this, void 0, void 0, function () {
-        var res, iframeDocuments, checkoutButton;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, loadSites()];
@@ -86,16 +86,7 @@ function initializeExtension() {
                     return [4 /*yield*/, setTopBar()];
                 case 2:
                     _a.sent();
-                    if (!siteIsSupported()) return [3 /*break*/, 4];
-                    return [4 /*yield*/, axios.get(chrome.runtime.getURL("topbar.html"))];
-                case 3:
-                    res = _a.sent();
-                    iframeDocuments = new DOMParser().parseFromString(res.data, "text/html");
-                    checkoutButton = iframeDocuments.querySelector("#" + yankeemallCheckoutButtonId);
-                    if (checkoutButton) {
-                    }
-                    _a.label = 4;
-                case 4: return [2 /*return*/];
+                    return [2 /*return*/];
             }
         });
     }); })();
@@ -148,6 +139,7 @@ function loadSites() {
                         case 4:
                             // Set the retrieved sites as the sites data
                             chrome.storage.sync.set({ sites: supportedSites });
+                            chrome.storage.sync.set({ lastRequestTime: Date.now() });
                             resolve();
                             return [3 /*break*/, 6];
                         case 5:
@@ -171,9 +163,10 @@ function loadSites() {
                             return [3 /*break*/, 10];
                         case 10:
                             // Set the retrieved sites as the sites data
-                            chrome.storage.sync.set({ sites: supportedSites });
-                            // Set the lastRequestTime
-                            chrome.storage.sync.set({ lastRequestTime: Date.now() });
+                            chrome.storage.sync.set({ sites: supportedSites }, function () {
+                                // Set the lastRequestTime
+                                chrome.storage.sync.set({ lastRequestTime: Date.now() }, function () { });
+                            });
                             resolve();
                             _a.label = 11;
                         case 11: return [2 /*return*/];
@@ -223,19 +216,91 @@ function removeTopBar() {
     iframe.parentNode.removeChild(iframe);
 }
 /**
- * The Check out button event listener
+ * Sends the cart details to the api
  */
-function checkoutHandler() {
-    alert("clicked");
+function sendCartDetailsToApi(html) {
+    return __awaiter(this, void 0, void 0, function () {
+        var siteInfo, data, res, e_3, e_4;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 5, , 6]);
+                    siteInfo = getCurrentSiteInfo();
+                    data = {
+                        html: html,
+                        host: siteInfo.host
+                    };
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, axios.post(processUrl, data)];
+                case 2:
+                    res = _a.sent();
+                    if (res.status === 200) {
+                        // Send the message to the extension to save it cart details
+                        if (res.data.success === true) {
+                            chrome.runtime.sendMessage({
+                                saveCartItems: true,
+                                cart: res.data.cart
+                            }, function (saved) {
+                                if (saved) {
+                                    alert("done");
+                                }
+                            });
+                        }
+                    }
+                    return [3 /*break*/, 4];
+                case 3:
+                    e_3 = _a.sent();
+                    if (e_3.response) {
+                    }
+                    return [3 /*break*/, 4];
+                case 4: return [3 /*break*/, 6];
+                case 5:
+                    e_4 = _a.sent();
+                    return [3 /*break*/, 6];
+                case 6: return [2 /*return*/];
+            }
+        });
+    });
+}
+/**
+ * Check if the current page is the cart page if it isn't it navigates to the cart page
+ * get's the html content of cart page and sends them to the server for processing
+ */
+function processCartPage() {
+    var _this = this;
+    // Check current page is cart page
+    if (!isCartPage()) {
+        goToCartPage();
+    }
+    // Get the body element
+    var content = document.querySelector("body");
+    var html = "<body>" + content.innerHTML + "</body>";
+    (function () { return __awaiter(_this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, sendCartDetailsToApi(html)];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+            }
+        });
+    }); })();
 }
 /**
  * For retrieving the cartUrl of the specified host
- * @param {string} host location.host
  */
-function getCartUrl(host) {
+function getCurrentSiteInfo() {
     // Check if the host is supported
-    if (siteIsSupported()) {
+    if (!siteIsSupported()) {
+        return null;
     }
+    var site = supportedSites.find(function (s) { return location.host.match(s.host); });
+    if (!site) {
+        return null;
+    }
+    return site;
 }
 /**
  * To check if the current site is supported
@@ -245,7 +310,23 @@ function siteIsSupported() {
     return !!supportedSites.find(function (s) { return !!location.host.match(s.host); });
 }
 /**
+ * Check if cart page
+ */
+function isCartPage() {
+    var cartUrls = getCurrentSiteInfo().cartUrls;
+    for (var _i = 0, cartUrls_1 = cartUrls; _i < cartUrls_1.length; _i++) {
+        var cartUrl = cartUrls_1[_i];
+        if (cartUrl === location.origin + location.pathname) {
+            return true;
+        }
+    }
+    return false;
+}
+/**
  * For navigating to the cart page
  */
-function goToCartPage() { }
+function goToCartPage() {
+    var site = getCurrentSiteInfo();
+    location.href = site.cartUrls[0] + location.search;
+}
 //# sourceMappingURL=main.js.map

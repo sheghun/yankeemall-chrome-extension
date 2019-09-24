@@ -20,13 +20,15 @@ function openNewTab(url) {
  */
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.checkoutButtonClicked) {
-        alert("background");
         // Send message to process cart page
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-            alert("background tab");
-            chrome.tabs.sendMessage(tabs[0].id, { processCartPage: true }, function (response) {
-                console.log(response.farewell);
-            });
+            chrome.tabs.sendMessage(tabs[0].id, { processCartPage: true }, function () { });
+        });
+    }
+    else if (request.saveCartItems) {
+        // Save the cart items
+        chrome.storage.sync.set({ cart: request.cart }, function () {
+            openNewTab("http://localhost:8080/checkout");
         });
     }
 });
@@ -44,6 +46,14 @@ chrome.runtime.onMessageExternal.addListener(function (request, sender, sendResp
                 version: version
             });
         }
+    }
+    else if (request.retrieveCartString) {
+        chrome.storage.sync.get("cart", function (_a) {
+            var cart = _a.cart;
+            if (cart !== null && typeof cart === "string") {
+                sendResponse(cart);
+            }
+        });
     }
     return true;
 });
