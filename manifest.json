@@ -10,7 +10,7 @@
     "content_scripts": [
         {
             "css": ["style.css"],
-            "js": ["axios.min.js", "src.js", "main.js"],
+            "js": ["axios.min.js", "main.js"],
             "matches": ["\u003Call_urls>"],
             "run_at": "document_start"
         }

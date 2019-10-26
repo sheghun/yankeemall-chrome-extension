@@ -1,9 +1,17 @@
 {
+  "scripts": {
+    "build": "tsc && ts-node copyDependecies.ts"
+  },
   "dependencies": {
     "@types/axios": "^0.14.0",
     "@types/chrome": "^0.0.88",
     "@types/jquery": "^3.3.31",
     "tsc": "^1.20150623.0",
     "typescript": "^3.6.3"
+  },
+  "devDependencies": {
+    "@types/shelljs": "^0.8.5",
+    "shelljs": "^0.8.3",
+    "ts-node": "^8.4.1"
   }
 }

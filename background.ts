@@ -1,5 +1,6 @@
 /** This variable is used for tracking popups shown in tabs. */
 const popupsShowInTabs = {};
+const eromallsWelcome = 'https://eromalls.com/installed'
 const loginPopupsShowInTabs = {};
 /** This variable is used for finding Checkout button on top bar is clicked or not. */
 let isBtnClicked = false;
@@ -23,6 +24,7 @@ function openNewTab(url) {
  * @param {string} sendResponse - sendResponse is an acknowledgement
  */
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    console.log(request);
     if (request.checkoutButtonClicked) {
         // Send message to process cart page
         chrome.tabs.query({ active: true, currentWindow: true }, function(
@@ -34,11 +36,34 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 function() {}
             );
         });
-    } else if (request.saveCartItems) {
-        // Save the cart items
-        chrome.storage.sync.set({ cart: request.cart }, function() {
-            openNewTab("http://localhost:8080/checkout");
+    } else if (request.checkIfIsCartPage) {
+        console.log(sender);
+        // send message to main.ts to know if its cart page
+        chrome.tabs.query({ active: true, currentWindow: true }, function(
+            tabs
+        ) {
+            chrome.tabs.sendMessage(
+                tabs[0].id,
+                { checkIfIsCartPage: true },
+                function(isCartPage) {
+                    if (isCartPage) {
+                        chrome.tabs.query(
+                            { active: true, currentWindow: true },
+                            function(tabs) {
+                                chrome.tabs.sendMessage(
+                                    tabs[0].id,
+                                    { isCartPage: true },
+                                    function() {}
+                                );
+                            }
+                        );
+                    }
+                }
+            );
         });
+    } else if (request.popUpClicked) {
+        removeUpdateNotification();
+        openNewTab(eromallsWelcome)
     }
 });
 
@@ -71,87 +96,6 @@ chrome.runtime.onMessageExternal.addListener(function(
 });
 
 /**
- * Listens when tabs are created
- */
-chrome.tabs.onCreated.addListener(function(tab) {
-    chrome.tabs.sendMessage(
-        tab.id,
-        {
-            tabClose: true
-        },
-        function() {}
-    );
-});
-
-/**
- * Listens when tabs are removed or closed
- */
-chrome.tabs.onRemoved.addListener(function(tabs) {
-    chrome.tabs.query(
-        {
-            active: true,
-            currentWindow: true
-        },
-        function(tab) {
-            const currentTabId = tab[0].id;
-            chrome.tabs.sendMessage(
-                currentTabId,
-                {
-                    tabClose: true
-                },
-                function() {}
-            );
-        }
-    );
-    // Remove the tabs from the list of tabs
-    if (popupsShowInTabs.hasOwnProperty(tabs)) {
-        delete popupsShowInTabs[tabs];
-    }
-    if (loginPopupsShowInTabs.hasOwnProperty(tabs)) {
-        delete loginPopupsShowInTabs[tabs];
-    }
-});
-
-/**
- * Listens when tabs are updated
- * i.e when the url in a tab is set
- */
-chrome.tabs.onUpdated.addListener(function(tab) {
-    chrome.tabs.query(
-        {
-            active: true,
-            currentWindow: true
-        },
-        function(tab) {
-            const currentTabId = tab[0].id;
-            chrome.tabs.sendMessage(
-                currentTabId,
-                {
-                    tabClose: true
-                },
-                function() {}
-            );
-        }
-    );
-});
-
-/**
- * This method is used to extract domain from URL.
- * @param {string} url - url from which domain is extracted
- */
-function extractRootDomain(url) {
-    let domain;
-    if (url.indexOf("://") > -1) {
-        domain = url.split("/")[2];
-    } else {
-        domain = url.split("/")[0];
-    }
-    domain = domain.split(":")[0];
-    const temp = domain.split(".").reverse();
-    return temp[1] + "." + temp[0];
-}
-
-/**
  * This method opens chrome extension URL when extension is installed for the first time
  */
 function installNotice() {
@@ -173,7 +117,7 @@ function installNotice() {
         tab => {
             // Get the tab Id
             const currentTabId = tab[0].id;
-            const post_install_url = "https://google.com";
+            const post_install_url = "https://eromalls.com";
             chrome.tabs.update(currentTabId, { url: post_install_url });
         }
     );
@@ -187,14 +131,6 @@ function extensionVersion() {
         return localStorage.getItem("last_installed_version");
     }
 }
-
-function resetBtnClickedVal(callback) {
-    isBtnClicked = true;
-    if (typeof callback == "function") {
-        callback();
-    }
-}
-
 /**
  * This method changes the toolbar icon if version is updated
  */
@@ -223,34 +159,6 @@ function removeUpdateNotification() {
     });
     const last_installed_version = chrome.runtime.getManifest().version;
     localStorage.setItem("last_installed_version", last_installed_version);
-}
-
-/**
- *
- * @param {string} needle to check
- * @param {object} haystack object to search
- * @param {boolean} argStrict if it has to be strictly checked
- */
-function inArray(needle: string, haystack: object, argStrict: boolean) {
-    const strict = !!argStrict;
-    if (strict) {
-        for (let key in haystack) {
-            if (haystack.hasOwnProperty(key)) {
-                if (haystack[key] === needle) {
-                    return true;
-                }
-            }
-        }
-    } else {
-        for (let key in haystack) {
-            if (haystack.hasOwnProperty(key)) {
-                if (haystack[key] == needle) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
 }
 
 installNotice();

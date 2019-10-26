@@ -15,12 +15,17 @@ const yankeemallIframeId = "yankeemall_iframe";
 /**
  * CrawlUrl used to retrieve the list of sites
  */
-// const sitesUrl = "http://api.yankeemall.ng/sites";
-const sitesUrl = "http://localhost:8080/extension/sites";
+// const baseUrl = "http://localhost:8080"
+const baseUrl = "https://api.yankeemall.ng";
+const sitesUrl = `${baseUrl}/base/sites`;
+/**
+ *  Checkout Url to check out the
+ */
+const checkoutUrl = "http://www.eromalls.com/checkout";
 /**
  * Url used to process items on cartPage
  */
-const processUrl = "http://localhost:8080/extension/process";
+const processUrl = `${baseUrl}/extension/process`;
 /**
  *
  */
@@ -31,10 +36,13 @@ const cacheTime = 10800000; // 3 hours
  * Incoming messages from the background script
  *
  */
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.processCartPage) {
         processCartPage();
         sendResponse();
+    } else if (request.checkIfIsCartPage) {
+        console.log(request);
+        sendResponse(isCartPage());
     }
 });
 
@@ -49,6 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function initializeExtension() {
     // Load the sites
     (async () => {
+        console.log("working");
         await loadSites();
         await setTopBar();
     })();
@@ -64,12 +73,15 @@ function loadSites() {
          * Try to check if the data has been stored
          * Retrieve the last ajax request time
          */
-        chrome.storage.sync.get("lastRequestTime", async function(obj) {
+        chrome.storage.sync.get("lastRequestTime", async function (obj) {
+            console.log('[LAST REQUEST TIME', obj);
+
             async function requestForSites() {
                 // @ts-ignore
                 const res = await axios.get(sitesUrl);
-                if (res.status === 200) {
-                    return res.data;
+                console.log('[REQUEST FOR SITES]');
+                if (res.status === 200 && res.data.status === "success") {
+                    return res.data.data;
                 }
             }
 
@@ -83,15 +95,29 @@ function loadSites() {
                     // Fetch the sites from the server
                     try {
                         supportedSites = await requestForSites();
-                    } catch (e) {}
-                    // Set the retrieved sites as the sites data
+                        console.log('[TRY FETCH"ING SUPPORTED SITES IF ELAPSED TIME IS MORE THAN CACHE TIME]', supportedSites);
+                        // Check if response is received from the server or else just fetch from the cache
+                        if (supportedSites.length > 0) {
+                            // Set the retrieved sites as the sites data
+                            chrome.storage.sync.set({sites: supportedSites});
+                            chrome.storage.sync.set({lastRequestTime: Date.now()});
+                        } else {
+                            chrome.storage.sync.get("sites", function (sites) {
+                                console.log('[SITES FROM STORAGE]', sites);
+                                if (sites["sites"] !== undefined) {
+                                    supportedSites = sites["sites"];
+                                    resolve();
+                                }
+                            });
+                        }
 
-                    chrome.storage.sync.set({ sites: supportedSites });
-                    chrome.storage.sync.set({ lastRequestTime: Date.now() });
+                    } catch (e) {
+                    }
                     resolve();
                 } else {
                     // Means the time has not been elapsed fetch the already stored data
-                    chrome.storage.sync.get("sites", function(sites) {
+                    chrome.storage.sync.get("sites", function (sites) {
+                        console.log('[SITES FROM STORAGE]', sites);
                         if (sites["sites"] !== undefined) {
                             supportedSites = sites["sites"];
                             resolve();
@@ -102,15 +128,20 @@ function loadSites() {
                 // Fetch the sites from the server
                 try {
                     supportedSites = await requestForSites();
-                } catch (e) {}
-                // Set the retrieved sites as the sites data
-                chrome.storage.sync.set({ sites: supportedSites }, () => {
-                    // Set the lastRequestTime
-                    chrome.storage.sync.set(
-                        { lastRequestTime: Date.now() },
-                        () => {}
-                    );
-                });
+                    console.log('TRY FETCHING SITES IF LAST REQUEST TIME DOES NOT EXISTS', supportedSites)
+                } catch (e) {
+                }
+                if (supportedSites.length > 0) {
+                    // Set the retrieved sites as the sites data
+                    chrome.storage.sync.set({sites: supportedSites}, () => {
+                        // Set the lastRequestTime
+                        chrome.storage.sync.set(
+                            {lastRequestTime: Date.now()},
+                            () => {
+                            }
+                        );
+                    });
+                }
 
                 resolve();
             }
@@ -119,7 +150,7 @@ function loadSites() {
 }
 
 /**
- * Responsible for setting the topbar that appears on the page
+ * Responsible for setting the top bar that appears on the page
  */
 async function setTopBar() {
     // Check if the site supported
@@ -131,23 +162,21 @@ async function setTopBar() {
     iframe.src = chrome.runtime.getURL("topbar.html");
     iframe.id = yankeemallIframeId;
     iframe.style.position = "fixed";
-    iframe.style.top = "0px";
-    iframe.style.left = "0px";
+    iframe.style.top = "20vh";
+    iframe.style.left = "86vw";
     iframe.style.zIndex = "1000000000000000000";
-    iframe.style.width = "100%";
+    iframe.style.width = "14vw";
     // iframe.style.height = "100%";
     iframe.style.border = "none";
     iframe.style.display = "block";
-    iframe.style.maxHeight = "64px";
     iframe.style.opacity = "1";
     // Append Iframe to the body
     const body = document.querySelector("body");
-    body.style.marginTop = "64px";
     body.append(iframe);
 }
 
 /**
- * Responsible for removing the topbar that
+ * Responsible for removing the top bar that
  */
 function removeTopBar() {
     // Get the iframe
@@ -163,6 +192,7 @@ async function sendCartDetailsToApi(html: string) {
     try {
         // Get the site info
         const siteInfo = getCurrentSiteInfo();
+        console.log('[SEND CART DETAILS SITE INFO]', siteInfo);
         const data = {
             html,
             host: siteInfo.host
@@ -171,18 +201,22 @@ async function sendCartDetailsToApi(html: string) {
         try {
             // @ts-ignore
             const res = await axios.post(processUrl, data);
+            console.log('[SEND CART DETAILS SITE INFO]', res);
             if (res.status === 200) {
                 // Send the message to the extension to save it cart details
-                if (res.data.success === true) {
-                    chrome.runtime.sendMessage(
-                        {
-                            saveCartItems: true,
-                            cart: res.data.cart
-                        },
-                        saved => {
-                            if (saved) {
-                                alert("done");
-                            }
+                if (res.data.status === "success") {
+                    chrome.storage.sync.set(
+                        {cart: res.data.data},
+                        function () {
+                            sessionStorage.setItem(
+                                "yankeeMallData",
+                                JSON.stringify(res.data.data)
+                            );
+                            const win = window.open(
+                                `${checkoutUrl}?yankeemallData=${res.data.data}`,
+                                "_blank"
+                            );
+                            win.focus();
                         }
                     );
                 }
@@ -191,7 +225,8 @@ async function sendCartDetailsToApi(html: string) {
             if (e.response) {
             }
         }
-    } catch (e) {}
+    } catch (e) {
+    }
 }
 
 /**
@@ -202,6 +237,7 @@ function processCartPage() {
     // Check current page is cart page
     if (!isCartPage()) {
         goToCartPage();
+        return;
     }
     // Get the body element
     const content = document.querySelector("body");
@@ -238,9 +274,11 @@ function siteIsSupported(): boolean {
  * Check if cart page
  */
 function isCartPage(): boolean {
-    const { cartUrls } = getCurrentSiteInfo();
+    const {cartUrls} = getCurrentSiteInfo();
     for (let cartUrl of cartUrls) {
-        if (cartUrl === location.origin + location.pathname) {
+        const pathname = location.pathname === "/" ? "" : location.pathname;
+        const fullUrl = location.origin + pathname;
+        if (cartUrl === fullUrl) {
             return true;
         }
     }
