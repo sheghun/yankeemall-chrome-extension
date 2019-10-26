@@ -1,7 +1,7 @@
 {
     "name": "YANKEEMALL",
     "version": "1.0.0",
-    "description": "Build an Extension!",
+    "description": "Buy items directly from top USA Stores and have them shipped to your doorstep in Africa",
     "manifest_version": 2,
     "background": {
         "scripts": ["background.js"],
