@@ -1,23 +1,31 @@
 {
-    "name": "YANKEEMALL",
-    "version": "1.0.0",
-    "description": "Buy items directly from top USA Stores and have them shipped to your doorstep in Africa",
-    "manifest_version": 2,
     "background": {
         "scripts": ["background.js"],
         "persistent": false
     },
+    "browser_action": {
+        "default_popup": "popup.html",
+        "default_icon": "images/32.png",
+        "default_title": "Eromalls Extension"
+    },
+    "name": "Eromalls",
+    "version": "1.0.0",
+    "description": "Buy items directly from top USA Stores and have them shipped to your doorstep in Africa",
+    "manifest_version": 2,
+    "short_name": "Eromalls",
     "content_scripts": [
         {
             "css": ["style.css"],
             "js": ["axios.min.js", "main.js"],
-            "matches": ["\u003Call_urls>"],
+            "matches": ["<all_urls>"],
             "run_at": "document_start"
         }
     ],
-    "browser_action": {
-        "default_popup": "popup.html",
-        "default_title": "MallForAfrica"
+    "icons": {
+        "128": "images/128.png",
+        "24": "images/24.png",
+        "32": "images/32.png",
+        "48": "images/48.png"
     },
     "permissions": [
         "storage",

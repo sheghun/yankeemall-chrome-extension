@@ -1,24 +1,22 @@
-const tooltip = document.querySelector(".tooltip");
-tooltip.innerHTML = "Add items to cart, go to your cart and click the icon";
-const icon = document.querySelector(".image") as HTMLImageElement;
+const button = document.querySelector(".yankeemall_check_out_button") as HTMLButtonElement;
+const textEl = document.querySelector(".text") as HTMLSpanElement;
 
-icon.addEventListener("click", function () {
-    tooltip.innerHTML = 'Processing';
-    icon.style.width = '65px';
+button.addEventListener("click", function () {
     chrome.runtime.sendMessage({checkoutButtonClicked: true}, function () {
     });
-});
+    textEl.innerText = 'Processing';
+    button.innerHTML = `<img src="images/loader.svg" height="40px"/>`;
 
-icon.addEventListener('mouseover', () => {
-    tooltip.classList.add('animate_in');
-    tooltip.classList.remove('animate_out')
+    setTimeout(() => {
+        textEl.innerText = 'Transferring your cart to eromalls';
+        setTimeout(() => {
+            textEl.innerText = 'Please hold on a sec while we get all the items';
+            setTimeout(() => {
+                textEl.innerText = 'Transferring your cart to eromalls';
+            }, 5000)
+        }, 5000)
+    }, 5000)
 });
-
-icon.addEventListener('mouseleave', () => {
-    tooltip.classList.add('animate_out');
-    tooltip.classList.remove('animate_in');
-});
-
 
 chrome.runtime.sendMessage({checkIfIsCartPage: true}, function () {
 });
@@ -26,7 +24,7 @@ chrome.runtime.sendMessage({checkIfIsCartPage: true}, function () {
 // Listen to the message
 chrome.runtime.onMessage.addListener(function (request) {
     if (request.isCartPage) {
-        tooltip.innerHTML =
-            "Hi you are on the cart page click the icon to checkout";
+        button.innerText = 'Checkout';
+        textEl.innerText = 'Click the button to checkout';
     }
 });

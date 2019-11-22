@@ -162,16 +162,17 @@ async function setTopBar() {
     iframe.src = chrome.runtime.getURL("topbar.html");
     iframe.id = yankeemallIframeId;
     iframe.style.position = "fixed";
-    iframe.style.top = "20vh";
-    iframe.style.left = "86vw";
+    iframe.style.bottom = "-2rem";
+    iframe.style.left = "0";
     iframe.style.zIndex = "1000000000000000000";
-    iframe.style.width = "14vw";
+    iframe.style.width = "100vw";
     // iframe.style.height = "100%";
     iframe.style.border = "none";
     iframe.style.display = "block";
     iframe.style.opacity = "1";
     // Append Iframe to the body
     const body = document.querySelector("body");
+    body.style.paddingBottom = '64px';
     body.append(iframe);
 }
 

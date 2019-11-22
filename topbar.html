@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8"/>
     <title>Title</title>
+    <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box !important;
             font-size: 18px;
+            font-family: 'Montserrat', sans-serif;
         }
 
         body {
@@ -20,91 +22,71 @@
 
         .yankeemall_wrapper {
             position: relative;
+            width: 100vw;
+            background-color: white;
+            margin-top: 3rem;
+            justify-content: space-evenly;
             align-items: center;
+            padding: auto 32px;
+            box-shadow: 2px -3px 10px #cdcdcd;
+            align-items: center;
+            height: 64px;
+            padding: 16px;
+            box-sizing: border-box;
             display: flex;
         }
 
-        .image {
-            width: 100px;
-            height: 100px;
-            border-radius: 100%;
-            margin-left: 1rem;
-            /*border: solid 1px #ff4252;*/
-            background-image: url("images/eromalls-logo.png");
-            background-color: white;
-            border: solid 1px black;
-            background-size: cover;
-            cursor: pointer;
-            background-repeat: no-repeat;
-            position: relative;
-            animation: rotate 4s linear infinite;
+        .arrow {
+            display: inline-block;
+            font-size: 32px;
+            animation: slide 2s linear infinite;
+        }
+
+        @keyframes slide {
+            from {
+                transform: translateX(-400%);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(0%);
+                opacity: 0;
+            }
+        }
+
+        .arrow_and_button_wrapper {
             display: flex;
-            z-index: 1000000000000000000;
-            box-shadow: 2px 2px 3px #c4c4c4;
-            justify-content: space-between;
             align-items: center;
-            max-height: 64px;
-            padding: 24px;
-        }
-
-        @keyframes rotate {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .tooltip {
-            background-color: white;
-            border-radius: 5%;
-            padding: 4px;
-            animation: fadein 2s 1 both, fadeout .5s 1 4s forwards;
-            font-size: 12px;
-            content: "Working";
-            color: rgba(0, 0, 0, 0.6);
-            transition: all .3s;
-            box-shadow: 2px 2px 6px #c4c4c4;
-        }
-
-        .animate_in {
-            animation: fadein .5s 1 forwards;
-        }
-
-        .animate_out {
-            animation: fadeout .5s 1 .5s forwards;
-        }
-
-        @keyframes fadein {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes fadeout {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-            }
         }
 
         .yankeemall_check_out_button {
-            padding: 10px;
+            padding: 16px;
+            border: none;
+            color: #D10065;
             cursor: pointer;
             border-radius: 5%;
         }
+        .yankeemall_check_out_button:hover {
+            background-color: rgba(209, 0, 101, 0.25);
+        }
+        .yankeemall_check_out_button:active {
+            outline: none;
+        }
+
     </style>
 </head>
 <body>
 <div class="yankeemall_wrapper">
-    <div class="tooltip"></div>
-    <div class="image"></div>
+    <img src="images/48.png"/>
+    <img src="images/loader.svg" height="40px"/>
+    <span class="text">
+        Click the button to go the cart page and checkout
+    </span>
+    <div class="arrow_and_button_wrapper">
+        <span class="arrow">
+            &#8594;
+        </span>
+        <button class="yankeemall_check_out_button">Go To Cart Page</button>
+    </div>
 </div>
 <script src="topbar.js"></script>
 </body>
