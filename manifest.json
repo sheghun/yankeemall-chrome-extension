@@ -9,7 +9,7 @@
         "default_title": "Eromalls Extension"
     },
     "name": "Eromalls",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "Buy items directly from top USA Stores and have them shipped to your doorstep in Africa",
     "manifest_version": 2,
     "short_name": "Eromalls",
