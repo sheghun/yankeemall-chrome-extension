@@ -174,6 +174,20 @@ async function setTopBar() {
     const body = document.querySelector("body");
     body.style.paddingBottom = '64px';
     body.append(iframe);
+
+    let counter = 0;
+
+    const intervalId = setInterval(() => {
+        if (counter === 20) {
+            clearInterval(intervalId);
+            return;
+        }
+        if (iframe.style.top) {
+            iframe.style.top = '';
+        }
+        counter++;
+        console.log(counter);
+    }, 3000);
 }
 
 /**
